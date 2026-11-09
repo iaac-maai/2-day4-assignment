@@ -84,6 +84,14 @@ TODO (Persons 2–4): at least one figure showing the training (training curves)
 
 ## AI usage disclosure
 
+| | |
+|---|---|
+| **Tools** | Claude (chat) |
+| **Why** | To save time on setup files and to understand errors and unclear concepts |
+| **Where** | First drafts of the README and `.gitignore`, debugging, and adapting parts of the class notebook to our data |
+| **How** | We wrote the notebook code ourselves following the class notebook. We asked Claude to draft the README and `.gitignore`, then checked and edited them. In some places we asked how to adapt the class code to our dataset, and when a cell failed we asked about the error. We applied the changes ourselves and re-ran the cells |
+
+**Lessons learned:** Claude saved time on routine files and on errors, but we always checked its answers against our own code and the brief.
 
 ## License
 
