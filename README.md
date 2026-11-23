@@ -3,7 +3,7 @@
 **Team:** Karthikeyan Saravanan, Emmanuel Marquez, Bars Babila, Samiha Abeda Nur
 **Course:** AI Methods I – Day 4: Neural networks and computer vision (IAAC MaAI 2026/27)
 **Track:** A1 – MLP on tabular data
-**Model on Hugging Face:** TODO (Person 4): `https://huggingface.co/iaac-maai/day4-group2-house-price-mlp`
+**Model on Hugging Face:** [iaac-maai/day4-group2-house-price-mlp](https://huggingface.co/iaac-maai/day4-group2-house-price-mlp) (weights, scaler and model card with a *How to use* snippet)
 
 ![Predicted vs actual price on the test set](figures/07_test_predicted_vs_actual.png)
 
@@ -58,7 +58,7 @@ Everything runs on a laptop CPU, no GPU needed: the whole notebook takes about 6
 - **Inputs:** 13 columns, the same as on Day 2: `bedrooms`, `bathrooms`, `sqft_living`, `sqft_lot`, `floors`, `condition`, `grade`, `sqft_basement`, `yr_built`, `yr_renovated`, `lat`, `long` (standardised) and `zipcode` (one-hot encoded, 70 ZIP codes), giving **82 inputs** to the network. The preprocessing is fitted on the training set only.
 - **Baselines** (section 2 of the notebook): a dummy model that always predicts the average price, and our **Day 2 model** (`HistGradientBoostingRegressor`, default settings), retrained on the Day 2 training set. It reproduces our published Day 2 test result (R² = 0.886).
 - **Architecture:** a multilayer perceptron, 82 inputs → 64 → 32 → 1 output (`log10(price)`), ReLU after each hidden layer, **7,425 parameters**. The output neuron's bias starts at the average `log10(price)` of the training set (see Experiments).
-- **Training:** Adam, learning rate 0.001 halved when the validation error has not improved for 5 epochs, weight decay 1e-4, Huber loss (δ = 0.05), batches of 64, up to 300 epochs. Early stopping keeps the epoch with the lowest **validation typical error** (patience 30); the final network kept epoch 75.
+- **Training:** Adam, learning rate 0.001 halved when the validation error has not improved for 5 epochs, weight decay 1e-4, Huber loss (δ = 0.05), batches of 64, up to 300 epochs. Early stopping keeps the epoch with the lowest **validation typical error** (patience 30); the final network kept epoch 75 in the notebook run and epoch 90 in the re-run that produced the published weights (see Results).
 - **Diagnosis** (section 4): the first network (section 3: MSE loss, no bias start) lost **10 of its 32 second-layer neurons** for good: they output 0 for every house. They die in the very first epoch, when the network predicts about 0 for a target of about 5.7 and the first gradient steps are huge.
 - **Experiments** (section 5): 27 experiments in three rounds, **changing one thing at a time**, each trained with **3 seeds** (42, 7, 2026) and compared on the validation set (mean ± spread). Round 1 started from the section 3 settings; round 2 from the round 1 winner; round 3 combined what helped. Starting the output bias at the mean price was by far the best single change (14.4% → 12.7%). Weight decay, Huber loss and a learning-rate schedule then brought it to 12.3%. Bigger networks and a larger learning rate made it worse.
 
@@ -76,9 +76,11 @@ Everything runs on a laptop CPU, no GPU needed: the whole notebook takes about 6
 |---|---|---|---|
 | Dummy (always the average price) | 0.000 | 47.0% | 196,281 |
 | Day 2: gradient boosting | 0.886 | 12.2% | 60,201 |
-| **Our network** | **0.877** | **12.6%** | **62,682** |
+| **Our network** (published weights) | **0.877** | **12.6%** | **62,797** |
 
 *Typical error = 10^MAE(log10) − 1: how far, in percent, a prediction usually is from the true price.*
+
+*The published weights (`model.pt` on Hugging Face) were re-trained with the same code, seed and settings on a different machine (Windows laptop CPU) when we added the save step; PyTorch is not bit-identical across machines. R² and typical error are the same as in section 6 of the notebook; the mean error is 62,797 USD instead of 62,682, early stopping kept epoch 90 of 120 instead of 75 of 105, and per price band the error moves by at most 0.3 point (section 7 of the notebook).*
 
 ![Baselines on the validation set](figures/00_baselines.png)
 
@@ -90,7 +92,13 @@ Everything runs on a laptop CPU, no GPU needed: the whole notebook takes about 6
 
 *In the middle of the market (300,000 to 685,000 USD) the network is as good as gradient boosting. It loses at both ends, most of all for the most expensive 20% of houses (15.7% against 14.7%).*
 
-TODO (Person 4): one figure showing what the model does (section 7, the application).
+### Application: screening design options for a plot
+
+The model is used as a **quick screening estimate** in an early feasibility study (section 8 of the notebook): an architect or a small developer compares two hand-made options on the same plot in ZIP 98117 (Seattle), keeping a 1952 single-storey house of 1,500 sqft or replacing it with a new two-storey house of 2,800 sqft, before paying for a design and a valuation. The houses are predicted with the model **reloaded from `models/model.pt` and `models/scaler.joblib`** (section 7), exactly as a user would.
+
+![Screening estimate for two design options](figures/09_application_design_options.png)
+
+*The network estimates option A at about 504,000 USD and option B at about 825,000 USD (2014–2015 prices): an uplift of about 320,000 USD to set against the construction cost. But each estimate is typically ±12.6% off, so the uplift could be anywhere between about 164,000 and 481,000 USD. This is a screening estimate to compare options, **not a valuation**.*
 
 ## Limitations
 
@@ -100,16 +108,16 @@ TODO (Person 4): one figure showing what the model does (section 7, the applicat
 - **Worse at the ends of the market:** the network is least reliable for houses under about 300,000 USD and over about 685,000 USD (typically 14-16% off), where the training data is thinnest.
 - **Special sales:** its largest errors are houses that sold far below what their description suggests (e.g. a new 4,460 sqft house sold for 490,000 USD, predicted at 1.4 million; old houses on very large lots). It cannot recognise unfinished buildings, land deals or distressed sales, so it should not be used to value an atypical property.
 - **Not more accurate than a simpler model:** gradient boosting is slightly better, needs no tuning and trains faster. The network is a second opinion, not a replacement.
-- TODO (Person 4): what the model should not be used for (application, section 7).
+- **Out-of-scope uses:** the model gives a screening estimate, not a valuation. It must not be used to set a sale price or an offer, for mortgage lending, insurance or property tax, or for any other decision about a specific property or person; nor for other regions or periods, for apartments, commercial buildings, land deals or atypical houses outside the ranges of the training data, or to judge the quality of a design (it does not see the design at all).
 
 ## AI usage disclosure
 
 | | |
 |---|---|
-| **Tools** | Claude (chat) |
-| **Why** | To save time on setup files and to understand errors and unclear concepts |
-| **Where** | First drafts of the README and `.gitignore`, debugging, and adapting parts of the class notebook to our data |
-| **How** | We wrote the notebook code ourselves following the class notebook. We asked Claude to draft the README and `.gitignore`, then checked and edited them. In some places we asked how to adapt the class code to our dataset, and when a cell failed we asked about the error. We applied the changes ourselves and re-ran the cells |
+| **Tools** | Claude (chat); Claude Code (an agent that edited files and ran code by itself) |
+| **Why** | To save time on setup files and to understand errors and unclear concepts; Claude Code to finish the publication step after the feedback in issue #5 |
+| **Where** | First drafts of the README and `.gitignore`, debugging, and adapting parts of the class notebook to our data. Claude Code: the save/reload and Application cells of the notebook (sections 7 and 8), the model card (`models/README.md`), the 3 remaining TODOs of this README, and the upload to Hugging Face |
+| **How** | We wrote the notebook code ourselves following the class notebook. We asked Claude to draft the README and `.gitignore`, then checked and edited them. In some places we asked how to adapt the class code to our dataset, and when a cell failed we asked about the error. We applied the changes ourselves and re-ran the cells. We gave Claude Code the feedback issue and asked it to add the save/reload and Application cells, write the model card from the notebook outputs and replace the TODOs, without re-running the long experiments; we reviewed the changes |
 
 **Lessons learned:** Claude saved time on routine files and on errors, but we always checked its answers against our own code and the brief.
 
